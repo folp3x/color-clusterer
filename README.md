@@ -52,8 +52,9 @@
 $$
 R' =
 \begin{cases}
-\dfrac{R}{12.92}, & \text{если } R \le 0.04045,\\[8pt]
-\left(\dfrac{R + 0.055}{1.055}\right)^{2.4}, & \text{если } R > 0.04045.
+\dfrac{R}{12.92}, & \text{если } R \le 0.04045 \\
+\\
+\left(\dfrac{R + 0.055}{1.055}\right)^{2.4}, & \text{если } R > 0.04045
 \end{cases}
 $$
 
@@ -64,9 +65,7 @@ $$
 X \\
 Y \\
 Z
-\end{bmatrix}
-=
-\begin{bmatrix}
+\end{bmatrix} = \begin{bmatrix}
 0.4124 & 0.3576 & 0.1805 \\
 0.2126 & 0.7152 & 0.0722 \\
 0.0193 & 0.1192 & 0.9505
@@ -99,8 +98,9 @@ $$
 $$
 f(t) =
 \begin{cases}
-t^{1/3}, & \text{если } t > \left(\frac{6}{29}\right)^3,\\[8pt]
-\frac{1}{3}\left(\frac{29}{6}\right)^2 t + \frac{4}{29}, & \text{иначе}.
+t^{1/3}, & \text{если } t > \left(\frac{6}{29}\right)^3 \\
+\\
+\frac{1}{3}\left(\frac{29}{6}\right)^2 t + \frac{4}{29}, & \text{иначе}
 \end{cases}
 $$
 
@@ -108,9 +108,9 @@ $$
 
 $$
 \begin{aligned}
-L &= 116 \cdot f\!\left(\frac{Y}{Y_n}\right) - 16 \\
-a &= 500 \cdot \left(f\!\left(\frac{X}{X_n}\right) - f\!\left(\frac{Y}{Y_n}\right)\right) \\
-b &= 200 \cdot \left(f\!\left(\frac{Y}{Y_n}\right) - f\!\left(\frac{Z}{Z_n}\right)\right)
+L &= 116 \cdot f\left(\frac{Y}{Y_n}\right) - 16 \\
+a &= 500 \cdot \left(f\left(\frac{X}{X_n}\right) - f\left(\frac{Y}{Y_n}\right)\right) \\
+b &= 200 \cdot \left(f\left(\frac{Y}{Y_n}\right) - f\left(\frac{Z}{Z_n}\right)\right)
 \end{aligned}
 $$
 
