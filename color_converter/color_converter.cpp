@@ -1,10 +1,5 @@
 #include "color_converter.h"
 
-/*
- * Функция удаляет альфа канал, смешивания цвет с белым фоном
- * Входные данные: pixel - пиксель с альфа-каналом
- * Выходные данные: result - пискель без альфа-канала
- */
 Rgb ColorConverter::removeAlpha(const Rgba &pixel) {
   Rgb result = {};
   if (pixel.a == 255) {
@@ -24,11 +19,6 @@ Rgb ColorConverter::removeAlpha(const Rgba &pixel) {
   return result;
 }
 
-/*
- * Функция переводит цвет из пространства RGB в пространство Lab
- * Входные данные: pixel - пиксель в формате RGB
- * Выходные данные: result - пискель в формате Lab
- */
 Lab ColorConverter::rgbToLab(const Rgb &pixel) {
   double r = pixel.r;
   double g = pixel.g;
@@ -92,11 +82,6 @@ Lab ColorConverter::rgbToLab(const Rgb &pixel) {
   return result;
 }
 
-/*
- * Функция переводит цвет из пространства Lab в пространство RGB
- * Входные данные: pixel - пиксель в формате Lab
- * Выходные данные: result - пискель в формате RGB
- */
 Rgb ColorConverter::labToRgb(const Lab &pixel) {
   // перевод в XYZ
   double y = (pixel.l + 16) / 116.0;
@@ -156,11 +141,6 @@ Rgb ColorConverter::labToRgb(const Lab &pixel) {
   return result;
 }
 
-/*
- * Функция переводит цвет из RGB в 16-ричный формат
- * Входные данные: pixel - пиксель в формате RGB
- * Выходные данные: result - пиксель в 16-ричном формате
- */
 QString ColorConverter::rgbToHex(const Rgb &pixel) {
   // приведение к диапазону 0-255
   uchar r = static_cast<uchar>(std::min(255.0, round((pixel.r * 255))));

@@ -4,11 +4,6 @@
 
 #include <QRandomGenerator>
 
-/*
- * Функция задает начальные центры кластеров с помощью алгоритма k-means++
- * Входные данные: points - набор точек, k - число кластеров
- * Выходные данные: centers - центры кластеров
- */
 std::vector<Lab> ColorClusterer::initCenters(const std::vector<Lab> &points,
                                              int k) {
   std::vector<Lab> centers;
@@ -43,23 +38,12 @@ std::vector<Lab> ColorClusterer::initCenters(const std::vector<Lab> &points,
   return centers;
 }
 
-/*
- * Функция вычисляет квадрат евклидова расстояния между двумя точками
- * Входные данные: p1 - первая точка, p2 - вторая точка
- * Выходные данные: distance - вычисленной расстойние
- */
 double ColorClusterer::distanceSquared(const Lab &p1, const Lab &p2) {
   double distance =
       pow(p1.l - p2.l, 2) + pow(p1.a - p2.a, 2) + pow(p1.b - p2.b, 2);
   return distance;
 }
 
-/*
- * Функция разделяет точки на кластеры с помощью алгоритма k-средних
- * Входные данные: points - набор точек, k - число кластеров,
- *  maxIter - максимальное число итераций для цикла, eps - точность
- * Выходные данные: centers - центры найденных кластеров
- */
 std::vector<Lab> ColorClusterer::kMeans(const std::vector<Lab> &points, int k,
                                         int maxIter, double eps) {
   // инициализация начальных центров

@@ -25,11 +25,6 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow() { delete ui; }
 
-/*
- * Функция создает палитру цветов изображения
- * Входные данные: img - изображение
- * Выходные данные: palette - созданная палитра
- */
 std::vector<Lab> MainWindow::getPallete(const QImage &img) {
   QImage rgbaImg = img.convertToFormat(QImage::Format_RGBA8888);
 
@@ -64,11 +59,6 @@ std::vector<Lab> MainWindow::getPallete(const QImage &img) {
   return palette;
 }
 
-/*
- * Функция выводит палитру цветов изображения
- * Входные данные: palette - палитра
- * Выходные данные: отсутствует
- */
 void MainWindow::showPallete(const std::vector<Lab> &palette) {
   for (int i = 0; i < palette.size(); i++) {
     Rgb rgbColor = ColorConverter::labToRgb(palette[i]);
@@ -86,11 +76,6 @@ void MainWindow::showPallete(const std::vector<Lab> &palette) {
   }
 }
 
-/*
- * Функция выводит изображение на белом фоне
- * Входные данные: img - изображение
- * Выходные данные: отсутствует
- */
 void MainWindow::showImage(const QImage &img) {
   // создание объекта для вывода изображения
   QPixmap pixmap = QPixmap::fromImage(img);
@@ -120,11 +105,6 @@ void MainWindow::showImage(const QImage &img) {
   ui->graphicsView->fitInView(item, Qt::KeepAspectRatio);
 }
 
-/*
- * Функция создает и выводит пример палитры
- * Входные данные: отсутствуют
- * Выходные данные: отсутствует
- */
 void MainWindow::loadExample() {
   QString filePath = ":/examples/example.jpg";
   QImage img(filePath);
