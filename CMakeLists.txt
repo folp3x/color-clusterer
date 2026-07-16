@@ -30,6 +30,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         color_clusterer/color_clusterer.h color_clusterer/color_clusterer.cpp
         images.qrc
 
+
     )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR})

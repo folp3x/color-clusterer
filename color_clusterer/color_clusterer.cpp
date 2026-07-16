@@ -1,117 +1,129 @@
 #include "color_clusterer.h"
 
-#include <cmath>
-
 #include <QRandomGenerator>
 
-std::vector<Lab> ColorClusterer::initCenters(const std::vector<Lab> &points,
-                                             int k) {
-  std::vector<Lab> centers;
+void ColorClusterer::initCenters(const std::vector<Lab> &points) {
+  QRandomGenerator gen{RandomSeed};
+
   std::vector<double> minDistances(points.size(),
                                    std::numeric_limits<double>::max());
 
+  m_centers.reserve(m_k);
+
   // случайный выбор первого центра
-  centers.push_back(points[QRandomGenerator::global()->bounded(points.size())]);
-  for (int i = 1; i < k; i++) {
+  int index = gen.bounded(points.size());
+  m_centers.push_back(points[index]);
+
+  for (int i = 1; i < m_k; ++i) {
     double totalSum = 0;
     // обновление квадратов расстояния до последнего выбранного центра
     for (int j = 0; j < points.size(); j++) {
-      double d = ColorClusterer::distanceSquared(points[j], centers.back());
+      double d = distanceSquared(points[j], m_centers.back());
       if (d < minDistances[j]) {
         minDistances[j] = d;
       }
       totalSum += minDistances[j];
     }
-    // генерация случайного числа в диапазоне от 0 до totalSum
-    double target = QRandomGenerator::global()->generateDouble() * totalSum;
+
+    double target = gen.generateDouble() * totalSum;
     double cumulativeSum = 0;
+
     // выбор следующего центра с вероятностью, пропорциональной d^2
-    for (int j = 0; j < points.size(); j++) {
+    for (int j = 0; j < points.size(); ++j) {
       cumulativeSum += minDistances[j];
       if (cumulativeSum >= target) {
-        centers.push_back(points[j]);
+        m_centers.push_back(points[j]);
         break;
       }
     }
   }
+}
 
-  return centers;
+void ColorClusterer::sortByClusterSize() {
+  for (int i = 0; i < m_centers.size() - 1; ++i) {
+    int maxInd = i;
+
+    for (int j = i; j < m_centers.size(); ++j) {
+      if (m_clusterSizes[j] > m_clusterSizes[maxInd]) {
+        maxInd = j;
+      }
+    }
+
+    std::swap(m_clusterSizes[i], m_clusterSizes[maxInd]);
+    std::swap(m_centers[i], m_centers[maxInd]);
+  }
 }
 
 double ColorClusterer::distanceSquared(const Lab &p1, const Lab &p2) {
-  double distance =
-      pow(p1.l - p2.l, 2) + pow(p1.a - p2.a, 2) + pow(p1.b - p2.b, 2);
+  double distance = std::pow(p1.l - p2.l, 2) + std::pow(p1.a - p2.a, 2) +
+                    std::pow(p1.b - p2.b, 2);
   return distance;
 }
 
-std::vector<Lab> ColorClusterer::kMeans(const std::vector<Lab> &points, int k,
-                                        int maxIter, double eps) {
-  // инициализация начальных центров
-  std::vector<Lab> centers = ColorClusterer::initCenters(points, k);
+double ColorClusterer::distance(const Lab &p1, const Lab &p2) {
+  return std::sqrt(distanceSquared(p1, p2));
+}
 
-  std::vector<int> clusterSizes = {};
+ColorClusterer::ColorClusterer(int k, int maxIter, double eps)
+    : m_k{k}, m_maxIter{maxIter}, m_eps{eps} {}
+
+void ColorClusterer::kMeans(const std::vector<Lab> &points) {
+  QRandomGenerator gen{RandomSeed};
+
+  initCenters(points);
+
   bool clustersFound = false;
-  int iter = 1;
-  while (!clustersFound && (iter < maxIter)) {
-    std::vector<double> sumL(k, 0);
-    std::vector<double> sumA(k, 0);
-    std::vector<double> sumB(k, 0);
-    clusterSizes.assign(k, 0);
+  int curIter = 1;
+
+  while (!clustersFound && (curIter < m_maxIter)) {
+    std::vector<double> sumL(m_k, 0);
+    std::vector<double> sumA(m_k, 0);
+    std::vector<double> sumB(m_k, 0);
+    m_clusterSizes.assign(m_k, 0);
 
     for (const auto &p : points) {
       // поиск кластера для точки
       int minIndex = 0;
-      double minDistance = ColorClusterer::distanceSquared(p, centers[0]);
-      for (int i = 1; i < k; i++) {
-        double d = ColorClusterer::distanceSquared(p, centers[i]);
+      double minDistance = distanceSquared(p, m_centers[0]);
+
+      for (int i = 1; i < m_k; ++i) {
+        double d = distanceSquared(p, m_centers[i]);
         if (d < minDistance) {
           minDistance = d;
           minIndex = i;
         }
       }
 
-      // обновление параметров кластера, к которому ближе текущая точка
       sumL[minIndex] += p.l;
       sumA[minIndex] += p.a;
       sumB[minIndex] += p.b;
-      clusterSizes[minIndex]++;
+      m_clusterSizes[minIndex]++;
     }
 
-    std::vector<Lab> newCenters(k, Lab{});
+    std::vector<Lab> newCenters(m_k, Lab{});
     clustersFound = true;
+
     // вычисление новых центров для каждого кластера
-    for (int i = 0; i < k; i++) {
-      if (clusterSizes[i] == 0) {
-        // выбор случайно точки если кластер пустой
-        newCenters[i] =
-            points[QRandomGenerator::global()->bounded(points.size())];
+    for (int i = 0; i < m_k; ++i) {
+      if (m_clusterSizes[i] == 0) {
+        int index = gen.bounded(points.size());
+        newCenters[i] = points[index];
         clustersFound = false;
       } else {
-        // вычисление координат нового центра
-        newCenters[i].l = sumL[i] / clusterSizes[i];
-        newCenters[i].a = sumA[i] / clusterSizes[i];
-        newCenters[i].b = sumB[i] / clusterSizes[i];
-        if (sqrt(ColorClusterer::distanceSquared(centers[i], newCenters[i])) >
-            eps) {
+        newCenters[i].l = sumL[i] / m_clusterSizes[i];
+        newCenters[i].a = sumA[i] / m_clusterSizes[i];
+        newCenters[i].b = sumB[i] / m_clusterSizes[i];
+
+        double d = distance(m_centers[i], newCenters[i]);
+        if (d > m_eps) {
           clustersFound = false;
         }
       }
     }
 
-    centers = newCenters;
-    iter++;
+    m_centers = std::move(newCenters);
+    curIter++;
   }
-  // сортировка центров по убыванию размеров кластеров
-  for (int i = 0; i < centers.size() - 1; i++) {
-    int maxInd = i;
-    for (int j = i; j < centers.size(); j++) {
-      if (clusterSizes[j] > clusterSizes[maxInd]) {
-        maxInd = j;
-      }
-    }
-    std::swap(clusterSizes[i], clusterSizes[maxInd]);
-    std::swap(centers[i], centers[maxInd]);
-  }
-
-  return centers;
 }
+
+std::vector<Lab> ColorClusterer::getCenters() const { return m_centers; }

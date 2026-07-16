@@ -1,10 +1,12 @@
 #ifndef RGB_H
 #define RGB_H
 
+#include <QtGlobal>
+
 struct Rgb {
-  float r;
-  float g;
-  float b;
+  uchar r;
+  uchar g;
+  uchar b;
 };
 
 #endif // RGB_H

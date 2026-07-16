@@ -1,42 +1,58 @@
 #include "color_converter.h"
 
-Rgb ColorConverter::removeAlpha(const Rgba &pixel) {
-  Rgb result = {};
-  if (pixel.a == 255) {
-    // если пиксель непрозрачный
-    result.r = static_cast<double>(pixel.r) / 255.0;
-    result.g = static_cast<double>(pixel.g) / 255.0;
-    result.b = static_cast<double>(pixel.b) / 255.0;
-  } else if (pixel.a > 0) {
-    // если пиксель полупрозрачный
-    Rgb background = {255, 255, 255};
-    double norm_a = static_cast<double>(pixel.a) / 255.0;
-    result.r = (pixel.r * norm_a + background.r * (1 - norm_a)) / 255.0;
-    result.g = (pixel.g * norm_a + background.g * (1 - norm_a)) / 255.0;
-    result.b = (pixel.b * norm_a + background.b * (1 - norm_a)) / 255.0;
-  }
+uchar ColorConverter::denormalizeRgbChannel(double channel) {
+  double rounded = std::round(channel * MaxRgbChannelValue);
+  return static_cast<uchar>(std::min(MaxRgbChannelValue, rounded));
+}
 
-  return result;
+double ColorConverter::normalizeRgbChannel(uchar channel) {
+  return static_cast<double>(channel) / MaxRgbChannelValue;
+}
+
+uchar ColorConverter::blendRgbChannel(uchar pixelChannel, uchar bgChannel,
+                                      double alpha) {
+  double normalizedPixel = normalizeRgbChannel(pixelChannel);
+  double normalizedBg = normalizeRgbChannel(bgChannel);
+
+  return denormalizeRgbChannel(normalizedPixel * alpha +
+                               normalizedBg * (1 - alpha));
+}
+
+Rgb ColorConverter::removeAlpha(const Rgba &pixel) {
+  Rgb whiteBg = {255, 255, 255};
+  if (pixel.a == NonTransparentAlpha) {
+    return Rgb{pixel.r, pixel.g, pixel.b};
+  } else if (pixel.a > TransparentAlpha) {
+    double alpha = normalizeRgbChannel(pixel.a);
+
+    Rgb result{};
+    result.r = blendRgbChannel(pixel.r, whiteBg.r, alpha);
+    result.g = blendRgbChannel(pixel.g, whiteBg.g, alpha);
+    result.b = blendRgbChannel(pixel.b, whiteBg.b, alpha);
+    return result;
+  } else {
+    return whiteBg;
+  }
 }
 
 Lab ColorConverter::rgbToLab(const Rgb &pixel) {
-  double r = pixel.r;
-  double g = pixel.g;
-  double b = pixel.b;
+  double r = normalizeRgbChannel(pixel.r);
+  double g = normalizeRgbChannel(pixel.g);
+  double b = normalizeRgbChannel(pixel.b);
 
   // переход от sRGB к линейному цвету
   if (r > 0.04045) {
-    r = pow((r + 0.055) / 1.055, 2.4);
+    r = std::pow((r + 0.055) / 1.055, 2.4);
   } else {
     r /= 12.92;
   }
   if (g > 0.04045) {
-    g = pow((g + 0.055) / 1.055, 2.4);
+    g = std::pow((g + 0.055) / 1.055, 2.4);
   } else {
     g /= 12.92;
   }
   if (b > 0.04045) {
-    b = pow((b + 0.055) / 1.055, 2.4);
+    b = std::pow((b + 0.055) / 1.055, 2.4);
   } else {
     b /= 12.92;
   }
@@ -58,23 +74,23 @@ Lab ColorConverter::rgbToLab(const Rgb &pixel) {
 
   // коррекция XYZ
   if (x > 0.008856) {
-    x = pow(x, 1.0 / 3.0);
+    x = std::pow(x, 1.0 / 3.0);
   } else {
     x = 7.787 * x + 16.0 / 116.0;
   }
   if (y > 0.008856) {
-    y = pow(y, 1.0 / 3.0);
+    y = std::pow(y, 1.0 / 3.0);
   } else {
     y = 7.787 * y + 16.0 / 116.0;
   }
   if (z > 0.008856) {
-    z = pow(z, 1.0 / 3.0);
+    z = std::pow(z, 1.0 / 3.0);
   } else {
     z = 7.787 * z + 16.0 / 116.0;
   }
 
   // перевод в Lab
-  Lab result;
+  Lab result{};
   result.l = (116 * y) - 16;
   result.a = 500 * (x - y);
   result.b = 200 * (y - z);
@@ -89,18 +105,18 @@ Rgb ColorConverter::labToRgb(const Lab &pixel) {
   double z = y - pixel.b / 200.0;
 
   // обратное преобразование XYZ
-  if (pow(y, 3) > 0.008856) {
-    y = pow(y, 3);
+  if (std::pow(y, 3) > 0.008856) {
+    y = std::pow(y, 3);
   } else {
     y = (y - 16.0 / 116.0) / 7.787;
   }
-  if (pow(x, 3) > 0.008856) {
-    x = pow(x, 3);
+  if (std::pow(x, 3) > 0.008856) {
+    x = std::pow(x, 3);
   } else {
     x = (x - 16.0 / 116.0) / 7.787;
   }
-  if (pow(z, 3) > 0.008856) {
-    z = pow(z, 3);
+  if (std::pow(z, 3) > 0.008856) {
+    z = std::pow(z, 3);
   } else {
     z = (z - 16.0 / 116.0) / 7.787;
   }
@@ -110,44 +126,42 @@ Rgb ColorConverter::labToRgb(const Lab &pixel) {
   y *= 100.000;
   z *= 108.883;
 
-  // нормализация XYZ
+  // нормировка XYZ
   x /= 100.0;
   y /= 100.0;
   z /= 100.0;
 
   // перевод в RGB
-  Rgb result = {};
-  result.r = x * 3.2406 + y * (-1.5372) + z * (-0.4986);
-  result.g = x * (-0.9689) + y * 1.8758 + z * 0.0415;
-  result.b = x * 0.0557 + y * (-0.2040) + z * 1.0570;
+  double r, g, b;
+  r = x * 3.2406 + y * (-1.5372) + z * (-0.4986);
+  g = x * (-0.9689) + y * 1.8758 + z * 0.0415;
+  b = x * 0.0557 + y * (-0.2040) + z * 1.0570;
 
   // переход от линейного цвета к sRGB
-  if (result.r > 0.0031308) {
-    result.r = 1.055 * pow(result.r, 1 / 2.4) - 0.055;
+  if (r > 0.0031308) {
+    r = 1.055 * pow(r, 1 / 2.4) - 0.055;
   } else {
-    result.r *= 12.92;
+    r *= 12.92;
   }
-  if (result.g > 0.0031308) {
-    result.g = 1.055 * pow(result.g, 1 / 2.4) - 0.055;
+  if (g > 0.0031308) {
+    g = 1.055 * pow(g, 1 / 2.4) - 0.055;
   } else {
-    result.g *= 12.92;
+    g *= 12.92;
   }
-  if (result.b > 0.0031308) {
-    result.b = 1.055 * pow(result.b, 1 / 2.4) - 0.055;
+  if (b > 0.0031308) {
+    b = 1.055 * pow(b, 1 / 2.4) - 0.055;
   } else {
-    result.b *= 12.92;
+    b *= 12.92;
   }
+
+  Rgb result = {};
+  result.r = denormalizeRgbChannel(r);
+  result.g = denormalizeRgbChannel(g);
+  result.b = denormalizeRgbChannel(b);
 
   return result;
 }
 
 QString ColorConverter::rgbToHex(const Rgb &pixel) {
-  // приведение к диапазону 0-255
-  uchar r = static_cast<uchar>(std::min(255.0, round((pixel.r * 255))));
-  uchar g = static_cast<uchar>(std::min(255.0, round((pixel.g * 255))));
-  uchar b = static_cast<uchar>(std::min(255.0, round((pixel.b * 255))));
-
-  // перевод в 16-ричную систему
-  QString result = QString::asprintf("#%02X%02X%02X", r, g, b);
-  return result;
+  return QString::asprintf("#%02X%02X%02X", pixel.r, pixel.g, pixel.b);
 }

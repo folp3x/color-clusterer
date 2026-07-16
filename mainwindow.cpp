@@ -53,10 +53,11 @@ std::vector<Lab> MainWindow::getPallete(const QImage &img) {
     }
   }
 
-  // создание палитры цветов изображения
-  std::vector<Lab> palette = ColorClusterer::kMeans(pixels, 6, 20, 1);
+  ColorClusterer clusterer{};
+  clusterer.kMeans(pixels);
+  clusterer.sortByClusterSize();
 
-  return palette;
+  return clusterer.getCenters();
 }
 
 void MainWindow::showPallete(const std::vector<Lab> &palette) {

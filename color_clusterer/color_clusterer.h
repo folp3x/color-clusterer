@@ -6,11 +6,30 @@
 #include "color_spaces/lab.h"
 
 class ColorClusterer {
-public:
-  static std::vector<Lab> initCenters(const std::vector<Lab> &points, int k);
+private:
+  static constexpr int RandomSeed = 42;
+
+  int m_k;
+  int m_maxIter;
+  double m_eps;
+
+  std::vector<Lab> m_centers{};
+  std::vector<int> m_clusterSizes = {};
+
   static double distanceSquared(const Lab &p1, const Lab &p2);
-  static std::vector<Lab> kMeans(const std::vector<Lab> &points, int k,
-                                 int maxIter, double eps);
+
+  static double distance(const Lab &p1, const Lab &p2);
+
+  void initCenters(const std::vector<Lab> &points);
+
+public:
+  explicit ColorClusterer(int k = 6, int maxIter = 20, double eps = 1);
+
+  void kMeans(const std::vector<Lab> &points);
+
+  void sortByClusterSize();
+
+  std::vector<Lab> getCenters() const;
 };
 
 #endif // COLOR_CLUSTERER_H
