@@ -1,11 +1,9 @@
 #ifndef COLORCONVERTER_H
 #define COLORCONVERTER_H
 
-#include <QString>
-
-#include "color_spaces/lab.h"
-#include "color_spaces/rgb.h"
-#include "color_spaces/rgba.h"
+#include "core/color_spaces/lab.h"
+#include "core/color_spaces/rgb.h"
+#include "core/color_spaces/rgba.h"
 
 class ColorConverter {
 private:

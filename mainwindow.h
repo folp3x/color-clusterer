@@ -3,7 +3,8 @@
 
 #include <QMainWindow>
 
-#include <vector>
+#include <QGraphicsScene>
+#include <QList>
 
 #include "color_spaces/lab.h"
 
@@ -21,14 +22,23 @@ public:
   ~MainWindow();
 
 private slots:
-  void on_pushButton_clicked();
+  void onBtnChooseImgClicked();
 
 private:
   Ui::MainWindow *ui;
 
-  std::vector<Lab> getPallete(const QImage &img);
-  void showPallete(const std::vector<Lab> &palette);
+  static inline const QString ExampleImgFilePath = ":/examples/example.jpg";
+
+  static const size_t MaxPaletteLayoutCols = 6;
+
+  QGraphicsScene *m_scene = nullptr;
+
+  static QList<Lab> getPixels(const QImage &img);
+
+  void showPallete(const QList<Lab> &palette, const QList<size_t> &occurrences,
+                   size_t pixelCount);
   void showImage(const QImage &img);
   void loadExample();
+  void clearPaletteLayout();
 };
 #endif // MAINWINDOW_H

@@ -154,7 +154,7 @@ Rgb ColorConverter::labToRgb(const Lab &pixel) {
     b *= 12.92;
   }
 
-  Rgb result = {};
+  Rgb result{};
   result.r = denormalizeRgbChannel(r);
   result.g = denormalizeRgbChannel(g);
   result.b = denormalizeRgbChannel(b);

@@ -2,12 +2,12 @@
 #include "./ui_mainwindow.h"
 
 #include <QGraphicsPixmapItem>
-#include <QGraphicsScene>
 #include <QPainter>
 
 #include <QFileDialog>
 #include <QStandardPaths>
 #include <QTimer>
+#include <QVBoxLayout>
 
 #include "color_clusterer/color_clusterer.h"
 #include "color_converter/color_converter.h"
@@ -19,13 +19,16 @@ MainWindow::MainWindow(QWidget *parent)
   ui->setupUi(this);
 
   setWindowTitle("Генератор цветовых палитр");
-  // вывод примера палитры после загрузки приложения
-  QTimer::singleShot(0, this, &MainWindow::loadExample);
+
+  connect(ui->btnChooseImg, &QPushButton::clicked, this,
+          &MainWindow::onBtnChooseImgClicked);
+
+  QTimer::singleShot(0, loadExample);
 }
 
 MainWindow::~MainWindow() { delete ui; }
 
-std::vector<Lab> MainWindow::getPallete(const QImage &img) {
+QList<Lab> MainWindow::getPixels(const QImage &img) {
   QImage rgbaImg = img.convertToFormat(QImage::Format_RGBA8888);
 
   // выборка пикселей
@@ -37,7 +40,7 @@ std::vector<Lab> MainWindow::getPallete(const QImage &img) {
   }
 
   uchar *bits = rgbaImg.bits();
-  std::vector<Lab> pixels = {};
+  QList<Lab> pixels{};
   // перебор байтов для каждого пикселя
   for (int y = 0; y < rgbaImg.height(); y += step) {
     for (int x = 0; x < rgbaImg.width(); x += step) {
@@ -53,28 +56,70 @@ std::vector<Lab> MainWindow::getPallete(const QImage &img) {
     }
   }
 
-  ColorClusterer clusterer{};
-  clusterer.kMeans(pixels);
-  clusterer.sortByClusterSize();
-
-  return clusterer.getCenters();
+  return pixels;
 }
 
-void MainWindow::showPallete(const std::vector<Lab> &palette) {
-  for (int i = 0; i < palette.size(); i++) {
-    Rgb rgbColor = ColorConverter::labToRgb(palette[i]);
-    QString hex = ColorConverter::rgbToHex(rgbColor);
+void MainWindow::showPallete(const QList<Lab> &palette,
+                             const QList<size_t> &occurrences,
+                             size_t pixelCount) {
+  clearPaletteLayout();
 
-    // вывод цвета
-    QLayoutItem *colorItem = ui->gridLayout->itemAtPosition(0, i);
-    QLabel *colorLabel = qobject_cast<QLabel *>(colorItem->widget());
-    colorLabel->setStyleSheet("background-color: " + hex);
-
-    // вывод 16-ричного кода
-    QLayoutItem *hexItem = ui->gridLayout->itemAtPosition(1, i);
-    QLabel *hexLabel = qobject_cast<QLabel *>(hexItem->widget());
-    hexLabel->setText(hex);
+  if (palette.size() != occurrences.size()) {
+    return;
   }
+
+  size_t curRow = 0;
+  size_t curCol = 0;
+  for (int i = 0; i < palette.size(); ++i) {
+    QWidget *paletteElem = new QWidget();
+    paletteElem->setMinimumWidth(90);
+
+    QVBoxLayout *paletteElemLayout = new QVBoxLayout(paletteElem);
+    paletteElemLayout->setSpacing(2);
+    paletteElemLayout->setContentsMargins(4, 4, 4, 4);
+
+    Rgb rgb = ColorConverter::labToRgb(palette[i]);
+    QString hex = ColorConverter::rgbToHex(rgb);
+
+    QLabel *colorLabel = new QLabel();
+    colorLabel->setStyleSheet("background-color: " + hex);
+    colorLabel->setMinimumHeight(40);
+    paletteElemLayout->addWidget(colorLabel);
+
+    QLabel *hexLabel = new QLabel();
+    hexLabel->setText(hex);
+    hexLabel->setAlignment(Qt::AlignCenter);
+    hexLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+
+    QFont hexLabelFont = hexLabel->font();
+    hexLabelFont.setPointSize(11);
+    hexLabel->setFont(hexLabelFont);
+
+    paletteElemLayout->addWidget(hexLabel);
+
+    QLabel *percentageLabel = new QLabel();
+    double percentage = static_cast<double>(occurrences[i]) / pixelCount * 100;
+    QString percentageStr = QString("%1\%").arg(percentage, 0, 'g', 2);
+    percentageLabel->setText(percentageStr);
+    percentageLabel->setAlignment(Qt::AlignCenter);
+
+    QFont percentageLabelFont = percentageLabel->font();
+    percentageLabelFont.setPointSize(10);
+    percentageLabelFont.setBold(true);
+    percentageLabel->setFont(percentageLabelFont);
+
+    paletteElemLayout->addWidget(percentageLabel);
+
+    if (curCol >= MaxPaletteLayoutCols) {
+      curCol = 0;
+      curRow++;
+    }
+
+    ui->paletteLayout->addWidget(paletteElem, curRow, curCol);
+    curCol++;
+  }
+
+  ui->paletteLayout->setVerticalSpacing(0);
 }
 
 void MainWindow::showImage(const QImage &img) {
@@ -94,43 +139,64 @@ void MainWindow::showImage(const QImage &img) {
   pixmap = result;
 
   // создание сцены для вывода изображения
-  QGraphicsScene *scene = new QGraphicsScene(this);
-  scene->clear();
-  QGraphicsPixmapItem *item = scene->addPixmap(pixmap);
+  if (!m_scene) {
+    m_scene = new QGraphicsScene(this);
+  } else {
+    m_scene->clear();
+  }
+  QGraphicsPixmapItem *item = m_scene->addPixmap(pixmap);
   item->setPos(item->boundingRect().center());
 
   // установка сцены и настройка параметров
-  ui->graphicsView->setScene(scene);
-  ui->graphicsView->setRenderHint(QPainter::Antialiasing);
-  ui->graphicsView->setRenderHint(QPainter::SmoothPixmapTransform);
-  ui->graphicsView->fitInView(item, Qt::KeepAspectRatio);
+  ui->image->setScene(m_scene);
+  ui->image->setRenderHint(QPainter::Antialiasing);
+  ui->image->setRenderHint(QPainter::SmoothPixmapTransform);
+  ui->image->fitInView(item, Qt::KeepAspectRatio);
 }
 
 void MainWindow::loadExample() {
-  QString filePath = ":/examples/example.jpg";
-  QImage img(filePath);
+  QImage img(ExampleImgFilePath);
   if (!img.isNull()) {
-    // если файл корректно загружен
-    std::vector<Lab> palette = getPallete(img);
+    QList<Lab> pixels = getPixels(img);
+
+    ColorClusterer clusterer{};
+    clusterer.kMeans(pixels);
+    clusterer.sortByClusterSize();
+
     showImage(img);
-    showPallete(palette);
+    showPallete(clusterer.getCenters(), clusterer.getClusterSizes(),
+                clusterer.getTotalPoints());
   }
 }
 
-void MainWindow::on_pushButton_clicked() {
+void MainWindow::clearPaletteLayout() {
+  while (QLayoutItem *paletteItem = ui->paletteLayout->takeAt(0)) {
+    if (QWidget *paletteWidget = paletteItem->widget()) {
+      paletteWidget->deleteLater();
+    }
+  }
+}
+
+void MainWindow::onBtnChooseImgClicked() {
   QString filePath = QFileDialog::getOpenFileName(
-      this, tr("Выберите файл"),
+      this, "Выберите файл",
       QStandardPaths::writableLocation(QStandardPaths::DownloadLocation),
-      tr("Изображения (*.bmp *.jpg *.jpeg *.png)"));
+      "Изображения (*.bmp *.jpg *.jpeg *.png)");
+
   if (!filePath.isEmpty()) {
-    // если файл был выбран
     QImage img(filePath);
     if (!img.isNull()) {
-      // если файл корректно загружен
-      std::vector<Lab> palette = getPallete(img);
-      showImage(img);
-      showPallete(palette);
       ui->labelExampleTitle->clear();
+
+      QList<Lab> pixels = getPixels(img);
+
+      ColorClusterer clusterer{};
+      clusterer.kMeans(pixels);
+      clusterer.sortByClusterSize();
+
+      showImage(img);
+      showPallete(clusterer.getCenters(), clusterer.getClusterSizes(),
+                  clusterer.getTotalPoints());
     }
   }
 }
