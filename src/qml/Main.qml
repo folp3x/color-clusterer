@@ -2,6 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Fusion
 import QtQuick.Layouts
+import QtQuick.Dialogs
+import QtCore
 
 ApplicationWindow {
     readonly property int fontMdPx: 18
@@ -16,19 +18,26 @@ ApplicationWindow {
 
     title: qsTr("Генератор цветовых палитр")
 
+    Component.onCompleted: {
+        app.clusterImage(image.source, paletteColorCountSlider.value);
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 20
 
         Label {
+            id: exampleTitle
             Layout.alignment: Qt.AlignHCenter
+            Layout.bottomMargin: 10
 
             text: qsTr("Пример палитры изображения")
             font.pixelSize: fontMdPx
         }
 
         Image {
-            Layout.topMargin: 10
+            id: image
+
             Layout.fillHeight: true
             Layout.maximumWidth: parent.width
             Layout.alignment: Qt.AlignHCenter
@@ -36,7 +45,16 @@ ApplicationWindow {
             source: "qrc:/examples/example.jpg"
             fillMode: Image.PreserveAspectFit
             mipmap: true
-            asynchronous: true
+            visible: !app.isClustering
+        }
+
+        BusyIndicator {
+            Layout.fillHeight: true
+            Layout.maximumWidth: parent.width
+            Layout.alignment: Qt.AlignHCenter
+
+            running: app.isClustering
+            visible: running
         }
 
         ScrollView {
@@ -45,8 +63,10 @@ ApplicationWindow {
             readonly property int rowHeight: 60
 
             id: paletteScroll
-            Layout.minimumHeight: rowHeight
-            Layout.maximumHeight: rowHeight * showedRows + rowGap * showedRows
+            visible: !app.isClustering
+
+            Layout.minimumHeight: rowHeight + rowGap * 2
+            Layout.maximumHeight: rowHeight * showedRows + rowGap * (showedRows + 1)
             Layout.topMargin: 20
             Layout.fillWidth: true
             contentHeight: paletteContainer.height
@@ -59,6 +79,7 @@ ApplicationWindow {
 
             ScrollBar.vertical : ScrollBar {
                 id: paletteScrollBar
+
                 anchors.right: parent.right
                 height: parent.height
 
@@ -77,6 +98,7 @@ ApplicationWindow {
                     )
 
                     id: paletteContainer
+
                     anchors.top: parent.top
                     anchors.horizontalCenter: parent.horizontalCenter
 
@@ -87,7 +109,8 @@ ApplicationWindow {
 
                     Repeater {
                         id: paletteElems
-                        model: ["#fb923c", "#4ade80", "#0d9488", "#2563eb"]
+
+                        model: app.palette
 
                         ColumnLayout {
                             width: paletteContainer.colWidth
@@ -99,7 +122,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
 
-                                color: modelData
+                                color: modelData.hexCode
                             }
 
                             RowLayout {
@@ -107,17 +130,30 @@ ApplicationWindow {
 
                                 spacing: 4
 
-                                Label {
-                                    Layout.alignment: Qt.AlignVCenter
+                                TextEdit {
+                                    Layout.alignment: Qt.AlignBaseline
 
-                                    text: modelData
+                                    text: modelData.hexCode
                                     font.pixelSize: fontSmPx
+                                    readOnly: true
+                                    selectByMouse: true
+                                    color: ApplicationWindow.window.palette.text
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.IBeamCursor
+                                        acceptedButtons: Qt.NoButton
+                                    }
                                 }
 
                                 Label {
-                                    Layout.alignment: Qt.AlignVCenter
+                                    Layout.alignment: Qt.AlignBaseline
 
-                                    text: "(0.12%)"
+                                    text: "(" +
+                                        parseFloat(
+                                            (modelData.percentage * 100).toFixed(2)
+                                        ) +
+                                    "%)"
                                     font.pixelSize: fontXsPx
                                 }
                             }
@@ -142,11 +178,13 @@ ApplicationWindow {
 
             Slider {
                 id: paletteColorCountSlider
+
                 Layout.fillWidth: true
 
                 from: 2
                 to: 16
                 stepSize: 1
+                value: 6
                 snapMode: Slider.SnapAlways
             }
         }
@@ -167,9 +205,25 @@ ApplicationWindow {
 
             text: qsTr("Выбрать изображение")
             font.pixelSize: fontSmPx
+            enabled: !app.isClustering
 
             onClicked: {
-                app.clusterImage();
+                fileDialog.open();
+            }
+        }
+
+        FileDialog {
+            id: fileDialog
+            title: "Выберите файл для открытия"
+            currentFolder: StandardPaths.writableLocation(StandardPaths.DownloadLocation)
+            nameFilters: "Изображения (*.bmp *.jpg *.jpeg *.png)"
+
+            onAccepted: {
+                exampleTitle.text = "";
+
+                var filePath = fileDialog.selectedFile;
+                image.source = filePath;
+                app.clusterImage(filePath, paletteColorCountSlider.value);
             }
         }
     }

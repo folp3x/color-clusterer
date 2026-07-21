@@ -137,7 +137,7 @@ void ColorClusterer::kMeans(const QList<Lab> &points) {
     }
 
 #ifdef QT_DEBUG
-    Logger::instance().log(QString("Iter %1 - min dist=%2, dist sum = %3:")
+    Logger::instance().log(QString("Iter №%1 - min dist=%2, dist sum=%3:")
                                .arg(curIter)
                                .arg(minDistance)
                                .arg(distanceSum));

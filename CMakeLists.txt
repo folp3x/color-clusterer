@@ -12,16 +12,14 @@ qt_standard_project_setup(REQUIRES 6.10)
 set(SOURCE_FILES
     src/main.cpp
 
-    # mainwindow.cpp
-    # mainwindow.h
-    mainwindow.ui
-
     src/core/color_spaces/lab.h
     src/core/color_spaces/rgb.h
     src/core/color_spaces/rgba.h
 
     src/core/color_converter/color_converter.h src/core/color_converter/color_converter.cpp
     src/core/color_clusterer/color_clusterer.h src/core/color_clusterer/color_clusterer.cpp
+
+    src/core/palette_color/palette_color.h
 
     src/logging/logger.h src/logging/logger.cpp
     src/app/app.h src/app/app.cpp
@@ -41,6 +39,7 @@ qt_add_qml_module(${PROJECT_NAME}
 
 set(RESOURCE_FILES
     examples/example.jpg
+    icons/app_icon.png
 )
 
 qt_target_qml_sources(${PROJECT_NAME}

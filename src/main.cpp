@@ -1,4 +1,5 @@
 #include <QGuiApplication>
+#include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 
@@ -8,6 +9,7 @@ int main(int argc, char *argv[]) {
   qputenv("QSG_RHI_BACKEND", "opengl");
 
   QGuiApplication app(argc, argv);
+  app.setWindowIcon(QIcon(":/icons/app_icon.png"));
 
   App coreApp{};
 
