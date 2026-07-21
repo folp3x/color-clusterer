@@ -10,27 +10,27 @@ find_package(Qt6 REQUIRED COMPONENTS Quick)
 qt_standard_project_setup(REQUIRES 6.10)
 
 set(SOURCE_FILES
-    main.cpp
+    src/main.cpp
 
     # mainwindow.cpp
     # mainwindow.h
     mainwindow.ui
 
-    core/color_spaces/lab.h
-    core/color_spaces/rgb.h
-    core/color_spaces/rgba.h
+    src/core/color_spaces/lab.h
+    src/core/color_spaces/rgb.h
+    src/core/color_spaces/rgba.h
 
-    core/color_converter/color_converter.h core/color_converter/color_converter.cpp
-    core/color_clusterer/color_clusterer.h core/color_clusterer/color_clusterer.cpp
+    src/core/color_converter/color_converter.h src/core/color_converter/color_converter.cpp
+    src/core/color_clusterer/color_clusterer.h src/core/color_clusterer/color_clusterer.cpp
 
-    logging/logger.h logging/logger.cpp
-    backend/backend.h backend/backend.cpp
+    src/logging/logger.h src/logging/logger.cpp
+    src/app/app.h src/app/app.cpp
 )
 
 qt_add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 set(QML_FILES
-    Main.qml
+    src/qml/Main.qml
 )
 
 qt_add_qml_module(${PROJECT_NAME}
@@ -48,6 +48,6 @@ qt_target_qml_sources(${PROJECT_NAME}
     RESOURCES ${RESOURCE_FILES}
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Quick)

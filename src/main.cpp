@@ -2,17 +2,17 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 
-#include "backend/backend.h"
+#include "app/app.h"
 
 int main(int argc, char *argv[]) {
   qputenv("QSG_RHI_BACKEND", "opengl");
 
   QGuiApplication app(argc, argv);
 
-  Backend backend{};
+  App coreApp{};
 
   QQmlApplicationEngine engine;
-  engine.rootContext()->setContextProperty("backend", &backend);
+  engine.rootContext()->setContextProperty("app", &coreApp);
 
   QObject::connect(
       &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
