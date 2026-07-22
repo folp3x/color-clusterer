@@ -53,6 +53,7 @@ void App::savePalette(const QUrl &fileUrl) const {
     for (const auto &variant : m_palette) {
       PaletteColor color = variant.value<PaletteColor>();
       file.write(color.hexCode.toUtf8());
+      file.write("\n");
     }
 
     file.close();
