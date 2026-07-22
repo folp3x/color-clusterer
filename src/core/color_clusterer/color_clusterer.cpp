@@ -1,22 +1,24 @@
 #include "color_clusterer.h"
 
+#include <QtConcurrent/QtConcurrent>
+
 #include "logging/logger.h"
 
 void ColorClusterer::initCenters(const QList<Lab> &points) {
   QList<double> minDistances(points.size(), std::numeric_limits<double>::max());
 
-  m_centers.clear();
-  m_centers.reserve(m_k);
+  m_clusterCenters.clear();
+  m_clusterCenters.reserve(m_k);
 
   // случайный выбор первого центра
   int index = m_gen.bounded(points.size());
-  m_centers.push_back(points[index]);
+  m_clusterCenters.push_back(points[index]);
 
   for (int i = 1; i < m_k; ++i) {
     double totalSum = 0;
     // обновление квадратов расстояния до последнего выбранного центра
     for (int j = 0; j < points.size(); ++j) {
-      double d = distanceSquared(points[j], m_centers.back());
+      double d = distanceSquared(points[j], m_clusterCenters.back());
       if (d < minDistances[j]) {
         minDistances[j] = d;
       }
@@ -30,7 +32,7 @@ void ColorClusterer::initCenters(const QList<Lab> &points) {
     for (int j = 0; j < points.size(); ++j) {
       cumulativeSum += minDistances[j];
       if (cumulativeSum >= targetSum) {
-        m_centers.push_back(points[j]);
+        m_clusterCenters.push_back(points[j]);
         break;
       }
     }
@@ -38,10 +40,10 @@ void ColorClusterer::initCenters(const QList<Lab> &points) {
 }
 
 void ColorClusterer::sortByClusterSize(bool descending) {
-  for (int i = 0; i < m_centers.size() - 1; ++i) {
+  for (int i = 0; i < m_clusterCenters.size() - 1; ++i) {
     int swappedInd = i;
 
-    for (int j = i; j < m_centers.size(); ++j) {
+    for (int j = i; j < m_clusterCenters.size(); ++j) {
       double cur = m_clusterSizes[j];
 
       bool isSwappedAsc = !descending && (cur > m_clusterSizes[swappedInd]);
@@ -53,7 +55,7 @@ void ColorClusterer::sortByClusterSize(bool descending) {
     }
 
     std::swap(m_clusterSizes[i], m_clusterSizes[swappedInd]);
-    std::swap(m_centers[i], m_centers[swappedInd]);
+    std::swap(m_clusterCenters[i], m_clusterCenters[swappedInd]);
   }
 }
 
@@ -68,40 +70,39 @@ double ColorClusterer::distance(const Lab &p1, const Lab &p2) {
 }
 
 ColorClusterer::ColorClusterer(int k, int maxIter, double eps)
-    : m_k{k}, m_maxIter{maxIter}, m_eps{eps} {}
+    : m_k{k}, m_maxIter{maxIter}, m_eps{eps}, m_clusterSizes(m_k) {}
 
 void ColorClusterer::kMeans(const QList<Lab> &points) {
-  m_totalPoints = points.size();
-
   initCenters(points);
 
   bool clustersFound = false;
   int curIter = 1;
 
   while (!clustersFound && (curIter < m_maxIter)) {
-    std::vector<double> sumL(m_k, 0);
-    std::vector<double> sumA(m_k, 0);
-    std::vector<double> sumB(m_k, 0);
-    m_clusterSizes.assign(m_k, 0);
+    std::vector<std::atomic<double>> sumL(m_k);
+    std::vector<std::atomic<double>> sumA(m_k);
+    std::vector<std::atomic<double>> sumB(m_k);
+    std::vector<std::atomic<int>> clusterSizes(m_k);
 
-    for (const auto &p : points) {
-      // поиск кластера для точки
-      int minIndex = 0;
-      double minDistance = distanceSquared(p, m_centers[0]);
+    QtConcurrent::blockingMap(
+        points, [this, &sumL, &sumA, &sumB, &clusterSizes](Lab p) {
+          // поиск кластера для точки
+          int minIndex = 0;
+          double minDistance = distanceSquared(p, m_clusterCenters[0]);
 
-      for (int i = 1; i < m_k; ++i) {
-        double d = distanceSquared(p, m_centers[i]);
-        if (d < minDistance) {
-          minDistance = d;
-          minIndex = i;
-        }
-      }
+          for (int i = 1; i < m_k; ++i) {
+            double d = distanceSquared(p, m_clusterCenters[i]);
+            if (d < minDistance) {
+              minDistance = d;
+              minIndex = i;
+            }
+          }
 
-      sumL[minIndex] += p.l;
-      sumA[minIndex] += p.a;
-      sumB[minIndex] += p.b;
-      m_clusterSizes[minIndex]++;
-    }
+          sumL[minIndex] += p.l;
+          sumA[minIndex] += p.a;
+          sumB[minIndex] += p.b;
+          clusterSizes[minIndex]++;
+        });
 
     QList<Lab> newCenters(m_k, Lab{});
     clustersFound = true;
@@ -113,6 +114,8 @@ void ColorClusterer::kMeans(const QList<Lab> &points) {
 
     // вычисление новых центров для каждого кластера
     for (int i = 0; i < m_k; ++i) {
+      m_clusterSizes[i] = clusterSizes[i].load();
+
       if (m_clusterSizes[i] == 0) {
         int index = m_gen.bounded(points.size());
         newCenters[i] = points[index];
@@ -122,7 +125,7 @@ void ColorClusterer::kMeans(const QList<Lab> &points) {
         newCenters[i].a = sumA[i] / m_clusterSizes[i];
         newCenters[i].b = sumB[i] / m_clusterSizes[i];
 
-        double d = distance(m_centers[i], newCenters[i]);
+        double d = distance(m_clusterCenters[i], newCenters[i]);
         if (d > m_eps) {
           clustersFound = false;
         }
@@ -145,13 +148,13 @@ void ColorClusterer::kMeans(const QList<Lab> &points) {
     Logger::instance().log();
 #endif
 
-    m_centers = std::move(newCenters);
+    m_clusterCenters = std::move(newCenters);
     curIter++;
   }
 }
 
-QList<Lab> ColorClusterer::getCenters() const { return m_centers; }
+QList<Lab> ColorClusterer::getClusterCenters() const {
+  return m_clusterCenters;
+}
 
 QList<size_t> ColorClusterer::getClusterSizes() const { return m_clusterSizes; }
-
-size_t ColorClusterer::getTotalPoints() const { return m_totalPoints; }

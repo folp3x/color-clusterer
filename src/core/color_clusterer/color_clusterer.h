@@ -2,6 +2,7 @@
 #define COLOR_CLUSTERER_H
 
 #include <QList>
+#include <QMutex>
 #include <QRandomGenerator>
 
 #include "core/color_spaces/lab.h"
@@ -16,9 +17,8 @@ private:
   int m_maxIter;
   double m_eps;
 
-  QList<Lab> m_centers{};
+  QList<Lab> m_clusterCenters{};
   QList<size_t> m_clusterSizes{};
-  size_t m_totalPoints;
 
   static double distanceSquared(const Lab &p1, const Lab &p2);
 
@@ -33,9 +33,8 @@ public:
 
   void sortByClusterSize(bool descending = false);
 
-  QList<Lab> getCenters() const;
+  QList<Lab> getClusterCenters() const;
   QList<size_t> getClusterSizes() const;
-  size_t getTotalPoints() const;
 };
 
 #endif // COLOR_CLUSTERER_H

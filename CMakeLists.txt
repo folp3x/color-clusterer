@@ -5,7 +5,7 @@ project(clusterer VERSION 0.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick)
+find_package(Qt6 REQUIRED COMPONENTS Quick Concurrent)
 
 qt_standard_project_setup(REQUIRES 6.10)
 
@@ -49,4 +49,4 @@ qt_target_qml_sources(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Quick)
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Quick Qt6::Concurrent)

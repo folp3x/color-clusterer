@@ -10,6 +10,7 @@ ApplicationWindow {
     readonly property int fontSmPx: 16
     readonly property int fontXsPx: 14
 
+    readonly property int btnMdW: 200
     width: 600
     minimumWidth: 375
     height: 520
@@ -45,7 +46,7 @@ ApplicationWindow {
             source: "qrc:/examples/example.jpg"
             fillMode: Image.PreserveAspectFit
             mipmap: true
-            visible: !app.isClustering
+            visible: !app.isProcessingImage
         }
 
         BusyIndicator {
@@ -53,7 +54,7 @@ ApplicationWindow {
             Layout.maximumWidth: parent.width
             Layout.alignment: Qt.AlignHCenter
 
-            running: app.isClustering
+            running: app.isProcessingImage
             visible: running
         }
 
@@ -63,7 +64,7 @@ ApplicationWindow {
             readonly property int rowHeight: 60
 
             id: paletteScroll
-            visible: !app.isClustering
+            visible: !app.isProcessingImage
 
             Layout.minimumHeight: rowHeight + rowGap * 2
             Layout.maximumHeight: rowHeight * showedRows + rowGap * (showedRows + 1)
@@ -117,8 +118,6 @@ ApplicationWindow {
                             height: paletteScroll.rowHeight
 
                             Rectangle {
-                                Layout.maximumWidth: parent.width
-                                Layout.maximumHeight: parent.height
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
 
@@ -199,32 +198,93 @@ ApplicationWindow {
             font.pixelSize: fontXsPx
         }
 
-        Button {
+        Flow {
+            readonly property int elemWidth: btnMdW
+
+            Layout.fillWidth: true
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: paletteColorCountText.height + 6
 
-            text: qsTr("Выбрать изображение")
-            font.pixelSize: fontSmPx
-            enabled: !app.isClustering
+            spacing: 6
 
-            onClicked: {
-                fileDialog.open();
+            leftPadding: {
+                let countInRow = ((width + spacing) / (elemWidth + spacing)) | 0;
+                let totalWidth = (elemWidth * countInRow) + spacing * (countInRow - 1);
+                if (width >= totalWidth) {
+                    return (width - totalWidth) / 2;
+                } else {
+                    return (width - elemWidth) / 2;
+                }
+            }
+
+            Button {
+                width: parent.elemWidth
+
+                text: qsTr("Выбрать изображение")
+                font.pixelSize: fontSmPx
+                enabled: !app.isProcessingImage
+
+                onClicked: {
+                    fileDialog.open();
+                }
+            }
+
+            Button {
+                width: parent.elemWidth
+
+                text: qsTr("Сохранить палитру")
+                font.pixelSize: fontSmPx
+                enabled: !app.isProcessingImage
+
+                onClicked: {
+                    savePaletteDialog.open();
+                }
             }
         }
+    }
 
-        FileDialog {
-            id: fileDialog
-            title: "Выберите файл для открытия"
-            currentFolder: StandardPaths.writableLocation(StandardPaths.DownloadLocation)
-            nameFilters: "Изображения (*.bmp *.jpg *.jpeg *.png)"
+    FileDialog {
+        id: chooseImgDialog
 
-            onAccepted: {
-                exampleTitle.text = "";
+        title: "Выберите файл для открытия"
+        currentFolder: StandardPaths.writableLocation(StandardPaths.DownloadLocation)
+        nameFilters: "Изображения (*.bmp *.jpg *.jpeg *.png)"
 
-                var filePath = fileDialog.selectedFile;
-                image.source = filePath;
-                app.clusterImage(filePath, paletteColorCountSlider.value);
-            }
+        onAccepted: {
+            exampleTitle.text = "";
+
+            let filePath = selectedFile;
+            image.source = filePath;
+            app.clusterImage(filePath, paletteColorCountSlider.value);
+        }
+    }
+
+    FileDialog {
+        id: savePaletteDialog
+
+        title: "Сохранить палитру"
+        fileMode: FileDialog.SaveFile
+        currentFolder: StandardPaths.writableLocation(StandardPaths.DownloadLocation)
+        nameFilters: ["Текстовые файлы (*.txt)"]
+
+        onAccepted: {
+            app.savePalette(selectedFile);
+            savePalleteInfo.open();
+        }
+    }
+
+    Dialog {
+        id: savePalleteInfo
+        title: qsTr("Успех")
+        anchors.centerIn: parent
+        modal: true
+        padding: 40
+
+        standardButtons: Dialog.Ok
+
+        Label {
+            text: qsTr("Палитра сохранена")
+            font.pixelSize: fontSmPx
         }
     }
 }
