@@ -36,17 +36,31 @@ ApplicationWindow {
             font.pixelSize: fontMdPx
         }
 
-        Image {
-            id: image
-
+        Item {
             Layout.fillHeight: true
+            Layout.fillWidth: true
             Layout.maximumWidth: parent.width
             Layout.alignment: Qt.AlignHCenter
 
-            source: "qrc:/examples/example.jpg"
-            fillMode: Image.PreserveAspectFit
-            mipmap: true
-            visible: !app.isProcessingImage
+            Image {
+                id: image
+                anchors.fill: parent
+
+                source: "qrc:/examples/example.jpg"
+                fillMode: Image.PreserveAspectFit
+                mipmap: true
+                visible: !app.isProcessingImage
+            }
+
+            Rectangle {
+                anchors.centerIn: image
+                width: image.paintedWidth
+                height: image.paintedHeight
+                z: -1
+
+                visible: !app.isProcessingImage
+                color: "#FFFFFF"
+            }
         }
 
         BusyIndicator {
@@ -163,8 +177,8 @@ ApplicationWindow {
         }
 
         RowLayout {
-            Layout.maximumWidth: 400
             Layout.fillWidth: true
+            Layout.maximumWidth: 400
             Layout.topMargin: 10
             Layout.alignment: Qt.AlignHCenter
 
@@ -225,7 +239,7 @@ ApplicationWindow {
                 enabled: !app.isProcessingImage
 
                 onClicked: {
-                    fileDialog.open();
+                    chooseImgDialog.open();
                 }
             }
 
